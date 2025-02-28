@@ -1,6 +1,5 @@
 // Configuration for OpenAI API
-// We'll get this from a meta tag in the HTML
-const OPENAI_API_KEY = document.querySelector('meta[name="openai-key"]')?.content || '';
+const OPENAI_API_KEY = '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';
 
 // Check if API key is configured
 if (!OPENAI_API_KEY) {
