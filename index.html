@@ -6,6 +6,19 @@
     <title>FoodHacks - AI-Powered Menu Recommendations</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="styles.css" rel="stylesheet">
+    <style>
+        .hero-bg {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        .food-grid-item {
+            transition: transform 0.3s ease;
+        }
+        .food-grid-item:hover {
+            transform: translateY(-5px);
+        }
+    </style>
 </head>
 <body class="bg-white">
     <!-- Navigation -->
@@ -25,21 +38,21 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="pt-32 pb-20">
+    <section class="hero-bg pt-32 pb-20 text-white">
         <div class="container mx-auto px-4 text-center">
-            <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6">
                 #1 AI Menu Recommendation App
             </h1>
-            <p class="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
+            <p class="text-xl mb-12 max-w-2xl mx-auto">
                 Save money and get personalized menu recommendations using AI instead of asking friends or spending hours reading reviews
             </p>
-            <div class="flex flex-col items-center space-y-4">
-                <div class="flex items-center space-x-2 text-lg text-gray-700 mb-6">
-                    <span>✨ Used by</span>
-                    <img src="https://placehold.co/80x30" alt="Brand 1" class="h-8">
-                    <img src="https://placehold.co/80x30" alt="Brand 2" class="h-8">
-                    <img src="https://placehold.co/80x30" alt="Brand 3" class="h-8">
-                </div>
+            <div class="grid grid-cols-3 gap-6 max-w-3xl mx-auto mb-12">
+                <img src="https://images.unsplash.com/photo-1565299507177-b0ac66763828?auto=format&fit=crop&w=300&q=80" 
+                     alt="Delicious Food" class="rounded-xl shadow-lg">
+                <img src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=300&q=80" 
+                     alt="Healthy Food" class="rounded-xl shadow-lg">
+                <img src="https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=300&q=80" 
+                     alt="Gourmet Food" class="rounded-xl shadow-lg">
             </div>
         </div>
     </section>
@@ -95,13 +108,13 @@
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
                                 <label class="text-gray-700">Tip Amount</label>
-                                <span class="text-sm text-gray-500" id="tipPercentage">20%</span>
+                                <span class="text-sm text-gray-500" id="tipPercentage">15%</span>
                             </div>
-                            <input type="range" id="tipSlider" min="15" max="25" value="20"
+                            <input type="range" id="tipSlider" min="0" max="25" value="15"
                                 class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black">
                             <div class="flex justify-between text-xs text-gray-500">
+                                <span>0%</span>
                                 <span>15%</span>
-                                <span>20%</span>
                                 <span>25%</span>
                             </div>
                         </div>
@@ -143,6 +156,43 @@
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">Your Personalized Recommendations</h2>
                 <div id="recommendationResults" class="space-y-4">
                     <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Food Categories Section -->
+    <section class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12">Popular Categories</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+                <div class="food-grid-item rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=300&q=80" 
+                         alt="Pizza" class="w-full h-48 object-cover">
+                    <div class="p-4 text-center">
+                        <h3 class="font-semibold">Italian</h3>
+                    </div>
+                </div>
+                <div class="food-grid-item rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=300&q=80" 
+                         alt="Sushi" class="w-full h-48 object-cover">
+                    <div class="p-4 text-center">
+                        <h3 class="font-semibold">Japanese</h3>
+                    </div>
+                </div>
+                <div class="food-grid-item rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1464500022836-1bdb0f80e90a?auto=format&fit=crop&w=300&q=80" 
+                         alt="Healthy" class="w-full h-48 object-cover">
+                    <div class="p-4 text-center">
+                        <h3 class="font-semibold">Healthy</h3>
+                    </div>
+                </div>
+                <div class="food-grid-item rounded-xl overflow-hidden shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1551782450-17144efb9c50?auto=format&fit=crop&w=300&q=80" 
+                         alt="Burgers" class="w-full h-48 object-cover">
+                    <div class="p-4 text-center">
+                        <h3 class="font-semibold">American</h3>
+                    </div>
                 </div>
             </div>
         </div>
