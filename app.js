@@ -1,9 +1,22 @@
 // Configuration for OpenAI API
-const OPENAI_API_KEY = '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';
-
-// Check if API key is configured
-if (!OPENAI_API_KEY) {
-    console.warn('OpenAI API key not configured. Please set the OPENAI_API_KEY environment variable.');
+async function getOpenAIKey() {
+    try {
+        const response = await fetch('/.netlify/functions/get-openai-key');
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('API Key Error:', error);
+            return null;
+        }
+        const data = await response.json();
+        if (!data.key || !data.key.startsWith('sk-')) {
+            console.error('Invalid API key format received');
+            return null;
+        }
+        return data.key;
+    } catch (error) {
+        console.error('Failed to get API key:', error);
+        return null;
+    }
 }
 
 // State Sales Tax Rates (2024)
@@ -212,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function getAIRecommendations(formData, feedback = '') {
+        const OPENAI_API_KEY = await getOpenAIKey();
         if (!OPENAI_API_KEY) {
             throw new Error('Please configure your OpenAI API key first');
         }
