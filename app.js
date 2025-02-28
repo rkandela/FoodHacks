@@ -482,22 +482,4 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         recommendationsDiv.scrollIntoView({ behavior: 'smooth' });
     }
-
-    // Add scroll behavior for navigation
-    let lastScrollY = window.scrollY;
-    let scrollThreshold = 50; // Minimum scroll before hiding nav
-    const nav = document.querySelector('nav');
-
-    window.addEventListener('scroll', () => {
-        const currentScroll = window.scrollY;
-        
-        if (currentScroll > lastScrollY && currentScroll > scrollThreshold) { // Scrolling down & past threshold
-            nav.classList.remove('nav-visible');
-            nav.classList.add('nav-hidden');
-        } else if (currentScroll < lastScrollY) { // Scrolling up
-            nav.classList.remove('nav-hidden');
-            nav.classList.add('nav-visible');
-        }
-        lastScrollY = currentScroll;
-    });
 });
