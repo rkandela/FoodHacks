@@ -21,7 +21,9 @@ async function getOpenAIKey() {
 
 // Configuration for Google Places API
 async function initGooglePlaces() {
+    console.log('Starting Google Places initialization...'); // Debug log
     try {
+        console.log('Fetching Google API key...'); // Debug log
         const response = await fetch('/.netlify/functions/get-google-key');
         if (!response.ok) {
             const error = await response.json();
@@ -29,13 +31,30 @@ async function initGooglePlaces() {
             return;
         }
         const data = await response.json();
+        console.log('Successfully retrieved API key'); // Debug log
+        
+        // Remove any existing Google Maps scripts
+        const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+        existingScripts.forEach(script => script.remove());
+        console.log('Removed existing Google Maps scripts'); // Debug log
         
         // Load the Google Places API script
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places&callback=initAutocomplete`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places`;
         script.async = true;
-        script.defer = true;
+        
+        // Add error handling for script loading
+        script.onerror = () => {
+            console.error('Failed to load Google Places API script');
+        };
+        
+        script.onload = () => {
+            console.log('Google Places API script loaded successfully'); // Debug log
+            initAutocomplete();
+        };
+        
         document.head.appendChild(script);
+        console.log('Added new Google Places API script to head'); // Debug log
     } catch (error) {
         console.error('Failed to initialize Google Places:', error);
     }
@@ -43,53 +62,69 @@ async function initGooglePlaces() {
 
 // Initialize Google Places Autocomplete
 function initAutocomplete() {
+    console.log('Initializing autocomplete...'); // Debug log
     const locationInput = document.getElementById('location');
-    const autocomplete = new google.maps.places.Autocomplete(locationInput, {
-        fields: ['address_components', 'name', 'formatted_address', 'geometry', 'place_id', 'types'],
-        types: ['establishment', 'geocode'] // Allow both establishments and addresses
-    });
+    if (!locationInput) {
+        console.error('Location input element not found');
+        return;
+    }
 
-    // Update placeholder to indicate functionality
-    locationInput.setAttribute('placeholder', 'Start typing a restaurant name or address...');
-    console.log('Autocomplete initialized'); // Debug log
+    try {
+        const autocomplete = new google.maps.places.Autocomplete(locationInput, {
+            fields: ['address_components', 'name', 'formatted_address', 'geometry', 'place_id', 'types'],
+            types: ['establishment', 'geocode'] // Allow both establishments and addresses
+        });
+        console.log('Autocomplete object created successfully'); // Debug log
 
-    // Handle place selection
-    autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        console.log('Selected place:', place); // For debugging
+        // Update placeholder to indicate functionality
+        locationInput.setAttribute('placeholder', 'Start typing a restaurant name or address...');
 
-        if (!place.address_components) {
-            console.error('No address components found');
-            return;
-        }
+        // Handle place selection
+        autocomplete.addListener('place_changed', () => {
+            console.log('Place selection detected'); // Debug log
+            const place = autocomplete.getPlace();
+            console.log('Selected place:', place); // For debugging
 
-        // Extract city and state
-        let city = '';
-        let state = '';
-        for (const component of place.address_components) {
-            const type = component.types[0];
-            if (type === 'locality') {
-                city = component.long_name;
-            } else if (type === 'administrative_area_level_1') {
-                state = component.short_name;
+            if (!place.address_components) {
+                console.error('No address components found in selected place');
+                return;
             }
-        }
 
-        // Update hidden fields
-        document.getElementById('city').value = city;
-        document.getElementById('state').value = state;
+            // Extract city and state
+            let city = '';
+            let state = '';
+            for (const component of place.address_components) {
+                const type = component.types[0];
+                if (type === 'locality') {
+                    city = component.long_name;
+                } else if (type === 'administrative_area_level_1') {
+                    state = component.short_name;
+                }
+            }
 
-        // If it's a restaurant or food establishment, update the restaurant name
-        if (place.types && (place.types.includes('restaurant') || 
-            place.types.includes('food') || 
-            place.types.includes('cafe') ||
-            place.types.includes('bar'))) {
-            document.getElementById('restaurant').value = place.name || '';
-        }
+            console.log('Extracted location data:', { city, state }); // Debug log
 
-        // Update location input to show full address
-        locationInput.value = place.formatted_address || '';
-    });
+            // Update hidden fields
+            document.getElementById('city').value = city;
+            document.getElementById('state').value = state;
+
+            // If it's a restaurant or food establishment, update the restaurant name
+            if (place.types && (place.types.includes('restaurant') || 
+                place.types.includes('food') || 
+                place.types.includes('cafe') ||
+                place.types.includes('bar'))) {
+                document.getElementById('restaurant').value = place.name || '';
+                console.log('Updated restaurant name:', place.name); // Debug log
+            }
+
+            // Update location input to show full address
+            locationInput.value = place.formatted_address || '';
+        });
+
+        console.log('Autocomplete initialization completed successfully'); // Debug log
+    } catch (error) {
+        console.error('Error initializing autocomplete:', error);
+    }
 }
 
 // Make initAutocomplete available globally
@@ -151,6 +186,7 @@ const STATE_TAX_RATES = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded, initializing application...'); // Debug log
     const form = document.getElementById('recommendationForm');
     const recommendationsDiv = document.getElementById('recommendations');
     const resultsDiv = document.getElementById('recommendationResults');
