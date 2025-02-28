@@ -46,22 +46,45 @@ function initAutocomplete() {
     const locationInput = document.getElementById('location');
     const autocomplete = new google.maps.places.Autocomplete(locationInput, {
         types: ['establishment'],
-        fields: ['address_components', 'name']
+        fields: ['address_components', 'name', 'formatted_address', 'geometry', 'place_id', 'types']
     });
+
+    // Update placeholder to indicate functionality
+    locationInput.setAttribute('placeholder', 'Start typing restaurant name or location...');
 
     // Handle place selection
     autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-        if (place.address_components) {
-            for (const component of place.address_components) {
-                if (component.types.includes('locality')) {
-                    document.getElementById('city').value = component.long_name;
-                }
-                if (component.types.includes('administrative_area_level_1')) {
-                    document.getElementById('state').value = component.short_name;
-                }
+        console.log('Selected place:', place); // For debugging
+
+        if (!place.address_components) {
+            console.error('No address components found');
+            return;
+        }
+
+        // If it's a restaurant, update the restaurant name field
+        if (place.types && (place.types.includes('restaurant') || place.types.includes('food'))) {
+            document.getElementById('restaurant').value = place.name || '';
+        }
+
+        // Extract city and state
+        let city = '';
+        let state = '';
+        for (const component of place.address_components) {
+            if (component.types.includes('locality')) {
+                city = component.long_name;
+            }
+            if (component.types.includes('administrative_area_level_1')) {
+                state = component.short_name;
             }
         }
+
+        // Update hidden fields
+        document.getElementById('city').value = city;
+        document.getElementById('state').value = state;
+
+        // Update location input to show full address
+        locationInput.value = place.formatted_address || '';
     });
 }
 
