@@ -314,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
             budget: document.getElementById('budget').value,
             includeTax: document.getElementById('includeTax').checked,
             tipPercentage: parseInt(document.getElementById('tipSlider').value),
+            familyStyle: document.getElementById('familyStyle').checked,
             preferences: Array.from(document.querySelectorAll('input[name="preferences"]:checked'))
                 .map(checkbox => checkbox.value),
             additional: document.getElementById('additional').value
@@ -324,16 +325,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const taxRate = await getSalesTaxRate(currentFormData.city, currentFormData.state);
             currentFormData.taxRate = taxRate;
             
-            // Adjust budget calculations for party size
-            if (currentFormData.includeTax && currentFormData.budget) {
-                const totalBudget = parseFloat(currentFormData.budget);
-                const budgetPerPerson = totalBudget / currentFormData.partySize;
-                const budgetWithoutTaxPerPerson = (budgetPerPerson / (1 + (taxRate / 100))).toFixed(2);
-                currentFormData.adjustedBudget = budgetWithoutTaxPerPerson;
+            // Calculate budget limits
+            const totalBudget = parseFloat(currentFormData.budget);
+            if (currentFormData.includeTax) {
+                const taxMultiplier = 1 + (taxRate / 100);
+                const tipMultiplier = 1 + (currentFormData.tipPercentage / 100);
+                // Work backwards from total to get food budget
+                const foodBudget = totalBudget / (taxMultiplier * tipMultiplier);
+                currentFormData.adjustedBudget = foodBudget.toFixed(2);
                 currentFormData.totalBudget = totalBudget;
-            } else if (currentFormData.budget) {
-                const totalBudget = parseFloat(currentFormData.budget);
-                currentFormData.adjustedBudget = (totalBudget / currentFormData.partySize).toFixed(2);
+            } else {
+                currentFormData.adjustedBudget = totalBudget.toFixed(2);
                 currentFormData.totalBudget = totalBudget;
             }
 
@@ -354,28 +356,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const budgetMessage = formData.includeTax 
-            ? `- Total budget for ${formData.partySize} people (including ${formData.taxRate}% sales tax): $${formData.totalBudget}\n  (This means the food total should be under $${formData.adjustedBudget} per person before tax)`
-            : `- Budget for food: $${formData.adjustedBudget} per person (tax not included)`;
+            ? `- Total maximum budget (including ${formData.taxRate}% sales tax and ${formData.tipPercentage}% tip): $${formData.totalBudget}\n  (This means the food total should be under $${formData.adjustedBudget} before tax and tip)`
+            : `- Maximum budget for food (before tax and tip): $${formData.adjustedBudget}`;
+
+        const diningStyle = formData.familyStyle
+            ? "Please recommend shareable dishes suitable for family-style dining. Include a mix of appetizers, mains, and sides that can be shared among the group. The total cost of all dishes combined should not exceed the budget."
+            : "Please recommend individual dishes, aiming to keep the per-person cost within the budget while ensuring everyone gets a complete meal.";
 
         const prompt = `As an AI restaurant menu expert, please recommend dishes from ${formData.restaurant} 
             located in ${formData.city}, ${formData.state}, with the following criteria:
             - Party size: ${formData.partySize} people
-            ${formData.budget ? budgetMessage : ''}
+            ${budgetMessage}
             ${formData.preferences.length ? `- Dietary preferences: ${formData.preferences.join(', ')}` : ''}
             ${formData.additional ? `- Additional preferences: ${formData.additional}` : ''}
             ${feedback ? `- Additional feedback: ${feedback}` : ''}
             
-            Please provide 3-5 specific dish recommendations. For each dish, include:
+            ${diningStyle}
+            
+            Please provide enough dishes to serve ${formData.partySize} people ${formData.familyStyle ? 'family-style' : 'individually'}. For each dish, include:
             1. Name of the dish
             2. Brief description and why it matches the criteria
             3. Price (in USD)
+            4. ${formData.familyStyle ? 'Recommended serving size (how many people it typically serves)' : 'Whether it is an individual portion'}
 
-            After listing the recommendations, please provide a cost breakdown including:
-            - Subtotal for food (per person and total for ${formData.partySize} people)
+            After listing the recommendations, please provide a detailed cost breakdown:
+            - Subtotal for food
             - Sales tax (${formData.taxRate}%)
             - Optional tip (${formData.tipPercentage}%)
-            - Total with tax and tip (per person and total for ${formData.partySize} people)
+            - Total with tax and tip
 
+            IMPORTANT: Ensure the total cost (including tax and tip if specified) stays within the $${formData.totalBudget} budget.
             Format each recommendation with a clear price at the end of each item.`;
 
         try {
