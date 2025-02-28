@@ -32,9 +32,9 @@ async function initGooglePlaces() {
         
         // Load the Google Places API script
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places&callback=initAutocomplete`;
         script.async = true;
-        script.onload = initAutocomplete;
+        script.defer = true;
         document.head.appendChild(script);
     } catch (error) {
         console.error('Failed to initialize Google Places:', error);
@@ -50,7 +50,8 @@ function initAutocomplete() {
     });
 
     // Update placeholder to indicate functionality
-    locationInput.setAttribute('placeholder', 'Start typing restaurant name or location...');
+    locationInput.setAttribute('placeholder', 'Start typing a restaurant name or address...');
+    console.log('Autocomplete initialized'); // Debug log
 
     // Handle place selection
     autocomplete.addListener('place_changed', () => {
@@ -90,6 +91,9 @@ function initAutocomplete() {
         locationInput.value = place.formatted_address || '';
     });
 }
+
+// Make initAutocomplete available globally
+window.initAutocomplete = initAutocomplete;
 
 // State Sales Tax Rates (2024)
 const STATE_TAX_RATES = {

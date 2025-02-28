@@ -172,18 +172,6 @@
         </div>
     </section>
 
-    <script>
-        // Function to load Google Places API
-        function loadGooglePlacesAPI() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_PLACES_API_KEY}&libraries=places`;
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
-        }
-        // Load the API when the page loads
-        window.onload = loadGooglePlacesAPI;
-    </script>
     <script src="app.js"></script>
 </body>
 </html> 
