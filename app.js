@@ -472,4 +472,19 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         recommendationsDiv.scrollIntoView({ behavior: 'smooth' });
     }
+
+    // Add scroll behavior for navigation
+    let lastScrollY = window.scrollY;
+    const nav = document.querySelector('nav');
+
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > lastScrollY) { // Scrolling down
+            nav.classList.remove('nav-visible');
+            nav.classList.add('nav-hidden');
+        } else { // Scrolling up
+            nav.classList.remove('nav-hidden');
+            nav.classList.add('nav-visible');
+        }
+        lastScrollY = window.scrollY;
+    });
 });
