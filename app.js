@@ -1,7 +1,7 @@
 // Configuration for OpenAI API
 async function getOpenAIKey() {
     try {
-        const response = await fetch('/.netlify/functions/get-openai-key');
+        const response = await fetch('https://foodhacks.netlify.app/.netlify/functions/get-openai-key');
         if (!response.ok) {
             const error = await response.json();
             console.error('API Key Error:', error);
@@ -24,7 +24,7 @@ async function initGooglePlaces() {
     console.log('Starting Google Places initialization...'); // Debug log
     try {
         console.log('Fetching Google API key...'); // Debug log
-        const response = await fetch('/.netlify/functions/get-google-key');
+        const response = await fetch('https://foodhacks.netlify.app/.netlify/functions/get-google-key');
         if (!response.ok) {
             const error = await response.json();
             console.error('Google Places API Key Error:', error);
