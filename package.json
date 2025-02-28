@@ -1,12 +1,5 @@
 {
   "name": "foodhacks",
   "version": "1.0.0",
-  "description": "AI-powered restaurant menu recommendations",
-  "main": "index.js",
-  "scripts": {
-    "build": "netlify-lambda build netlify/functions"
-  },
-  "dependencies": {
-    "@netlify/functions": "^2.0.0"
-  }
+  "description": "AI-powered restaurant menu recommendations"
 } 
