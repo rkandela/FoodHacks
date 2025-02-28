@@ -1,4 +1,6 @@
-exports.handler = async function(event, context) {
+const { builder } = require("@netlify/functions");
+
+async function handler(event, context) {
     // Only allow GET requests
     if (event.httpMethod !== 'GET') {
         return {
@@ -24,4 +26,6 @@ exports.handler = async function(event, context) {
             body: JSON.stringify({ error: 'Failed to get API key' })
         };
     }
-}; 
+}
+
+exports.handler = builder(handler); 
