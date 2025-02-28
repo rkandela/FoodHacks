@@ -1,27 +1,26 @@
 exports.handler = async function(event, context) {
-    const key = process.env.GOOGLE_PLACES_API_KEY;
+    // Check if the API key exists in environment variables
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     
-    if (!key) {
+    if (!apiKey) {
         return {
             statusCode: 500,
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
             body: JSON.stringify({
                 error: 'Google Places API key not found'
             })
         };
     }
-
+    
+    // Return the API key with CORS headers
     return {
         statusCode: 200,
         headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            key: key
+            key: apiKey
         })
     };
 }; 
