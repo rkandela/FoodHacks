@@ -1,33 +1,42 @@
 exports.handler = async function(event, context) {
-    // Log all environment variables (excluding their values for security)
-    console.log('Available environment variables:', Object.keys(process.env));
-    
-    // Check if the API key exists in environment variables
+    // Get the API key from environment variables
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     
+    // Get the origin from the request headers
+    const origin = event.headers.origin || '*';
+
+    // Handle preflight requests
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 204,
+            headers: {
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'GET, OPTIONS'
+            },
+            body: ''
+        };
+    }
+
     if (!apiKey) {
         console.log('API key not found in environment variables');
         return {
             statusCode: 500,
             headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Origin': origin,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                error: 'Google Places API key not found',
-                availableVars: Object.keys(process.env)
+                error: 'Google Places API key not configured'
             })
         };
     }
-    
-    console.log('API key found, returning response');
-    // Return the API key with CORS headers
+
+    console.log('Successfully retrieved API key');
     return {
         statusCode: 200,
         headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Origin': origin,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
