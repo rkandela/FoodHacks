@@ -63,14 +63,18 @@
 
                     <div class="mb-6">
                         <label for="location" class="block text-gray-700 font-medium mb-2">Restaurant Location</label>
-                        <div class="grid grid-cols-2 gap-4">
-                            <input type="text" id="city" name="city" required
-                                placeholder="City"
-                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black">
-                            <input type="text" id="state" name="state" required
-                                placeholder="State"
-                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black">
-                        </div>
+                        <input type="text" id="location" name="location" required
+                            placeholder="Enter restaurant location"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black">
+                        <input type="hidden" id="city" name="city">
+                        <input type="hidden" id="state" name="state">
+                    </div>
+
+                    <div class="mb-6">
+                        <label for="partySize" class="block text-gray-700 font-medium mb-2">Number of People</label>
+                        <input type="number" id="partySize" name="partySize" required min="1" value="1"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black"
+                            placeholder="Enter number of people">
                     </div>
 
                     <div class="mb-6">
@@ -168,6 +172,18 @@
         </div>
     </section>
 
+    <script>
+        // Function to load Google Places API
+        function loadGooglePlacesAPI() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_PLACES_API_KEY}&libraries=places`;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+        // Load the API when the page loads
+        window.onload = loadGooglePlacesAPI;
+    </script>
     <script src="app.js"></script>
 </body>
 </html> 

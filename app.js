@@ -19,6 +19,52 @@ async function getOpenAIKey() {
     }
 }
 
+// Configuration for Google Places API
+async function initGooglePlaces() {
+    try {
+        const response = await fetch('/.netlify/functions/get-google-key');
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Google Places API Key Error:', error);
+            return;
+        }
+        const data = await response.json();
+        
+        // Load the Google Places API script
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places`;
+        script.async = true;
+        script.onload = initAutocomplete;
+        document.head.appendChild(script);
+    } catch (error) {
+        console.error('Failed to initialize Google Places:', error);
+    }
+}
+
+// Initialize Google Places Autocomplete
+function initAutocomplete() {
+    const locationInput = document.getElementById('location');
+    const autocomplete = new google.maps.places.Autocomplete(locationInput, {
+        types: ['establishment'],
+        fields: ['address_components', 'name']
+    });
+
+    // Handle place selection
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.address_components) {
+            for (const component of place.address_components) {
+                if (component.types.includes('locality')) {
+                    document.getElementById('city').value = component.long_name;
+                }
+                if (component.types.includes('administrative_area_level_1')) {
+                    document.getElementById('state').value = component.short_name;
+                }
+            }
+        }
+    });
+}
+
 // State Sales Tax Rates (2024)
 const STATE_TAX_RATES = {
     'AL': 4.00,
@@ -82,6 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const tipPercentage = document.getElementById('tipPercentage');
     const taxRateSpan = document.getElementById('taxRate');
     let currentFormData = null;
+
+    // Initialize Google Places
+    initGooglePlaces();
 
     // Load saved favorites from localStorage
     const savedFavorites = JSON.parse(localStorage.getItem('taxTipFavorites')) || [];
@@ -195,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             restaurant: document.getElementById('restaurant').value,
             city: document.getElementById('city').value,
             state: document.getElementById('state').value,
+            partySize: parseInt(document.getElementById('partySize').value) || 1,
             budget: document.getElementById('budget').value,
             includeTax: document.getElementById('includeTax').checked,
             tipPercentage: parseInt(document.getElementById('tipSlider').value),
@@ -208,10 +258,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const taxRate = await getSalesTaxRate(currentFormData.city, currentFormData.state);
             currentFormData.taxRate = taxRate;
             
-            // Adjust budget if including tax
+            // Adjust budget calculations for party size
             if (currentFormData.includeTax && currentFormData.budget) {
-                const budgetWithoutTax = (parseFloat(currentFormData.budget) / (1 + (taxRate / 100))).toFixed(2);
-                currentFormData.adjustedBudget = budgetWithoutTax;
+                const totalBudget = parseFloat(currentFormData.budget);
+                const budgetPerPerson = totalBudget / currentFormData.partySize;
+                const budgetWithoutTaxPerPerson = (budgetPerPerson / (1 + (taxRate / 100))).toFixed(2);
+                currentFormData.adjustedBudget = budgetWithoutTaxPerPerson;
+                currentFormData.totalBudget = totalBudget;
+            } else if (currentFormData.budget) {
+                const totalBudget = parseFloat(currentFormData.budget);
+                currentFormData.adjustedBudget = (totalBudget / currentFormData.partySize).toFixed(2);
+                currentFormData.totalBudget = totalBudget;
             }
 
             const recommendations = await getAIRecommendations(currentFormData);
@@ -231,11 +288,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const budgetMessage = formData.includeTax 
-            ? `- Total budget (including ${formData.taxRate}% sales tax): $${formData.budget}\n  (This means the food total should be under $${formData.adjustedBudget} before tax)`
-            : `- Budget for food: $${formData.budget} (tax not included)`;
+            ? `- Total budget for ${formData.partySize} people (including ${formData.taxRate}% sales tax): $${formData.totalBudget}\n  (This means the food total should be under $${formData.adjustedBudget} per person before tax)`
+            : `- Budget for food: $${formData.adjustedBudget} per person (tax not included)`;
 
         const prompt = `As an AI restaurant menu expert, please recommend dishes from ${formData.restaurant} 
             located in ${formData.city}, ${formData.state}, with the following criteria:
+            - Party size: ${formData.partySize} people
             ${formData.budget ? budgetMessage : ''}
             ${formData.preferences.length ? `- Dietary preferences: ${formData.preferences.join(', ')}` : ''}
             ${formData.additional ? `- Additional preferences: ${formData.additional}` : ''}
@@ -247,10 +305,10 @@ document.addEventListener('DOMContentLoaded', () => {
             3. Price (in USD)
 
             After listing the recommendations, please provide a cost breakdown including:
-            - Subtotal for food
+            - Subtotal for food (per person and total for ${formData.partySize} people)
             - Sales tax (${formData.taxRate}%)
             - Optional tip (${formData.tipPercentage}%)
-            - Total with tax and tip
+            - Total with tax and tip (per person and total for ${formData.partySize} people)
 
             Format each recommendation with a clear price at the end of each item.`;
 
