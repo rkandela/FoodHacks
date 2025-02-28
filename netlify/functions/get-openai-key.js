@@ -1,4 +1,20 @@
 exports.handler = async function(event, context) {
+    const key = process.env.OPENAI_API_KEY;
+    console.log('Key starts with:', key ? key.substring(0, 7) : 'undefined');
+    
+    if (!key || !key.startsWith('sk-')) {
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                error: 'Invalid API key format'
+            })
+        };
+    }
+
     return {
         statusCode: 200,
         headers: {
@@ -6,7 +22,7 @@ exports.handler = async function(event, context) {
             'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
-            key: process.env.OPENAI_API_KEY
+            key: key
         })
     };
 }; 
