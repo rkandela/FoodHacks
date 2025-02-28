@@ -1,8 +1,13 @@
 [build]
+  command = "npm install"
   publish = "/"
-  command = ""
+  functions = "functions"
+
+[functions]
+  external_node_modules = ["express"]
+  node_bundler = "esbuild"
 
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/server"
   status = 200 
