@@ -1,7 +1,7 @@
 // Configuration for OpenAI API
 async function getOpenAIKey() {
     try {
-        const response = await fetch('https://foodhacks.netlify.app/.netlify/functions/get-openai-key');
+        const response = await fetch('/.netlify/functions/get-openai-key');
         if (!response.ok) {
             const error = await response.json();
             console.error('API Key Error:', error);
@@ -24,7 +24,7 @@ async function initGooglePlaces() {
     console.log('Starting Google Places initialization...'); // Debug log
     try {
         console.log('Fetching Google API key...'); // Debug log
-        const response = await fetch('https://foodhacks.netlify.app/.netlify/functions/get-google-key');
+        const response = await fetch('/.netlify/functions/get-google-key');
         if (!response.ok) {
             const error = await response.json();
             console.error('Google Places API Key Error:', error);
@@ -379,19 +379,13 @@ document.addEventListener('DOMContentLoaded', () => {
             Format each recommendation with a clear price at the end of each item.`;
 
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetch('/.netlify/functions/get-openai-recommendations', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: "gpt-3.5-turbo",
-                    messages: [{
-                        role: "user",
-                        content: prompt
-                    }],
-                    temperature: 0.7
+                    prompt: prompt
                 })
             });
 
@@ -402,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            return data.choices[0].message.content;
+            return data.content;
         } catch (error) {
             console.error('Full error:', error);
             throw new Error(`Failed to get recommendations: ${error.message}`);
