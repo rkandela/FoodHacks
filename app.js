@@ -508,14 +508,18 @@ document.addEventListener('DOMContentLoaded', () => {
         recommendationsDiv.classList.remove('hidden');
         resultsDiv.innerHTML = `
             <div class="prose">
+                <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800">
+                    <h4 class="font-semibold mb-2">Important Note</h4>
+                    <p class="text-sm">These recommendations are AI-generated suggestions based on similar restaurants and typical menu items. They may not reflect the actual current menu of ${window.selectedRestaurant?.name}. Please check with the restaurant directly for their current menu and prices.</p>
+                </div>
                 ${formatRecommendations(recommendations)}
                 <div class="mt-8 p-4 bg-gray-50 rounded-lg">
-                    <h3 class="text-lg font-semibold mb-3">Want to refine these recommendations?</h3>
+                    <h3 class="text-lg font-semibold mb-3">Want to refine these suggestions?</h3>
                     <p class="text-gray-600 mb-4">Let us know what you'd like to adjust:</p>
                     <textarea id="feedbackText" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                         rows="3" placeholder="Example: I'd like more vegetarian options, or dishes with less spice..."></textarea>
                     <button onclick="handleFeedback()" class="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-200">
-                        Refine Recommendations
+                        Refine Suggestions
                     </button>
                 </div>
             </div>
