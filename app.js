@@ -311,10 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
             city: document.getElementById('city').value,
             state: document.getElementById('state').value,
             partySize: parseInt(document.getElementById('partySize').value) || 1,
-            budget: document.getElementById('budget').value,
+            minBudget: document.getElementById('minBudget').value,
+            maxBudget: document.getElementById('maxBudget').value,
             includeTax: document.getElementById('includeTax').checked,
             tipPercentage: parseInt(document.getElementById('tipSlider').value),
             familyStyle: document.getElementById('familyStyle').checked,
+            courses: Array.from(document.querySelectorAll('input[name="courses"]:checked'))
+                .map(checkbox => checkbox.value),
             preferences: Array.from(document.querySelectorAll('input[name="preferences"]:checked'))
                 .map(checkbox => checkbox.value),
             additional: document.getElementById('additional').value
@@ -326,17 +329,24 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFormData.taxRate = taxRate;
             
             // Calculate budget limits
-            const totalBudget = parseFloat(currentFormData.budget);
+            const minBudget = parseFloat(currentFormData.minBudget);
+            const maxBudget = parseFloat(currentFormData.maxBudget);
+            
             if (currentFormData.includeTax) {
                 const taxMultiplier = 1 + (taxRate / 100);
                 const tipMultiplier = 1 + (currentFormData.tipPercentage / 100);
-                // Work backwards from total to get food budget
-                const foodBudget = totalBudget / (taxMultiplier * tipMultiplier);
-                currentFormData.adjustedBudget = foodBudget.toFixed(2);
-                currentFormData.totalBudget = totalBudget;
+                // Work backwards from total to get food budget range
+                const minFoodBudget = minBudget / (taxMultiplier * tipMultiplier);
+                const maxFoodBudget = maxBudget / (taxMultiplier * tipMultiplier);
+                currentFormData.adjustedMinBudget = minFoodBudget.toFixed(2);
+                currentFormData.adjustedMaxBudget = maxFoodBudget.toFixed(2);
+                currentFormData.totalMinBudget = minBudget;
+                currentFormData.totalMaxBudget = maxBudget;
             } else {
-                currentFormData.adjustedBudget = totalBudget.toFixed(2);
-                currentFormData.totalBudget = totalBudget;
+                currentFormData.adjustedMinBudget = minBudget.toFixed(2);
+                currentFormData.adjustedMaxBudget = maxBudget.toFixed(2);
+                currentFormData.totalMinBudget = minBudget;
+                currentFormData.totalMaxBudget = maxBudget;
             }
 
             const recommendations = await getAIRecommendations(currentFormData);
@@ -356,28 +366,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const budgetMessage = formData.includeTax 
-            ? `- Total maximum budget (including ${formData.taxRate}% sales tax and ${formData.tipPercentage}% tip): $${formData.totalBudget}\n  (This means the food total should be under $${formData.adjustedBudget} before tax and tip)`
-            : `- Maximum budget for food (before tax and tip): $${formData.adjustedBudget}`;
+            ? `- Total budget range (including ${formData.taxRate}% sales tax and ${formData.tipPercentage}% tip): $${formData.totalMinBudget} - $${formData.totalMaxBudget}\n  (This means the food total should be between $${formData.adjustedMinBudget} and $${formData.adjustedMaxBudget} before tax and tip)`
+            : `- Budget range for food (before tax and tip): $${formData.adjustedMinBudget} - $${formData.adjustedMaxBudget}`;
+
+        const coursesMessage = formData.courses.length
+            ? `- Requested courses: ${formData.courses.join(', ')}`
+            : '- No specific course preferences';
 
         const diningStyle = formData.familyStyle
-            ? "Please recommend shareable dishes suitable for family-style dining. Include a mix of appetizers, mains, and sides that can be shared among the group. The total cost of all dishes combined should not exceed the budget."
-            : "Please recommend individual dishes, aiming to keep the per-person cost within the budget while ensuring everyone gets a complete meal.";
+            ? "Please recommend shareable dishes suitable for family-style dining. Include a mix of the requested courses that can be shared among the group. The total cost of all dishes combined should be as close to the maximum budget as possible while staying within range."
+            : "Please recommend individual dishes for each person, aiming to get as close to the maximum budget as possible while staying within range. Ensure everyone gets their requested courses.";
 
         const prompt = `As an AI restaurant menu expert, please recommend dishes from ${formData.restaurant} 
             located in ${formData.city}, ${formData.state}, with the following criteria:
             - Party size: ${formData.partySize} people
             ${budgetMessage}
+            ${coursesMessage}
             ${formData.preferences.length ? `- Dietary preferences: ${formData.preferences.join(', ')}` : ''}
             ${formData.additional ? `- Additional preferences: ${formData.additional}` : ''}
             ${feedback ? `- Additional feedback: ${feedback}` : ''}
             
             ${diningStyle}
             
-            Please provide enough dishes to serve ${formData.partySize} people ${formData.familyStyle ? 'family-style' : 'individually'}. For each dish, include:
-            1. Name of the dish
-            2. Brief description and why it matches the criteria
-            3. Price (in USD)
-            4. ${formData.familyStyle ? 'Recommended serving size (how many people it typically serves)' : 'Whether it is an individual portion'}
+            IMPORTANT GUIDELINES:
+            1. Try to get as close to the maximum budget as possible while staying within the range
+            2. Only include courses that were specifically requested
+            3. For each dish, include:
+               - Name of the dish
+               - Brief description and why it matches the criteria
+               - Price (in USD)
+               - ${formData.familyStyle ? 'Recommended serving size (how many people it typically serves)' : 'Whether it is an individual portion'}
 
             After listing the recommendations, please provide a detailed cost breakdown:
             - Subtotal for food
@@ -385,8 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
             - Optional tip (${formData.tipPercentage}%)
             - Total with tax and tip
 
-            IMPORTANT: Ensure the total cost (including tax and tip if specified) stays within the $${formData.totalBudget} budget.
-            Format each recommendation with a clear price at the end of each item.`;
+            Ensure the total cost (including tax and tip if specified) stays within the $${formData.totalMinBudget} - $${formData.totalMaxBudget} range.`;
 
         try {
             const response = await fetch('/.netlify/functions/get-openai-recommendations', {
@@ -481,5 +498,61 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         recommendationsDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Add event listeners for food category cards
+    document.querySelectorAll('.food-grid-item').forEach(card => {
+        card.addEventListener('click', async function() {
+            this.classList.toggle('flipped');
+            
+            if (this.classList.contains('flipped')) {
+                const category = this.querySelector('h3').textContent;
+                const restaurantsList = this.querySelector('ul');
+                
+                try {
+                    // Get user's location
+                    const position = await getCurrentPosition();
+                    const { latitude, longitude } = position.coords;
+                    
+                    // Search for restaurants
+                    const service = new google.maps.places.PlacesService(document.createElement('div'));
+                    const request = {
+                        location: new google.maps.LatLng(latitude, longitude),
+                        radius: '5000',
+                        type: ['restaurant'],
+                        keyword: category
+                    };
+                    
+                    service.nearbySearch(request, (results, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK) {
+                            const topRestaurants = results.slice(0, 5);
+                            restaurantsList.innerHTML = topRestaurants.map(place => `
+                                <li class="text-sm py-1">
+                                    <strong>${place.name}</strong>
+                                    <br>
+                                    <span class="text-gray-600">${place.rating} ⭐ (${place.user_ratings_total} reviews)</span>
+                                </li>
+                            `).join('');
+                        } else {
+                            restaurantsList.innerHTML = '<li>Failed to load restaurants</li>';
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error fetching restaurants:', error);
+                    restaurantsList.innerHTML = '<li>Failed to load restaurants</li>';
+                }
+            }
+        });
+    });
+
+    // Helper function to get current position
+    function getCurrentPosition() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by your browser'));
+            } else {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            }
+        });
     }
 });
