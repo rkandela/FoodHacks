@@ -1,5 +1,16 @@
 {
-  "name": "foodhacks",
+  "name": "restaurant-ai-recommender",
   "version": "1.0.0",
-  "description": "AI-powered restaurant menu recommendations"
+  "description": "AI-powered restaurant menu recommendation system",
+  "main": "app.js",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.1"
+  },
+  "scripts": {
+    "start": "netlify dev",
+    "build": "netlify build"
+  },
+  "author": "",
+  "license": "ISC"
 } 

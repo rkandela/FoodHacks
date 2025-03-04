@@ -420,67 +420,101 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error('Please configure your OpenAI API key first');
         }
 
-        const budgetMessage = formData.includeTax 
-            ? `- Total budget range (including ${formData.taxRate}% sales tax and ${formData.tipPercentage}% tip): $${formData.totalMinBudget} - $${formData.totalMaxBudget}\n  (This means the food total should be between $${formData.adjustedMinBudget} and $${formData.adjustedMaxBudget} before tax and tip)`
-            : `- Budget range for food (before tax and tip): $${formData.adjustedMinBudget} - $${formData.adjustedMaxBudget}`;
-
-        const coursesMessage = formData.courses.length
-            ? `- Requested courses: ${formData.courses.join(', ')}`
-            : '- No specific course preferences';
-
-        const getFamilyStyleGuidelines = (partySize) => {
-            // Calculate recommended number of dishes based on party size
-            const appetizers = Math.max(3, Math.min(5, Math.ceil(partySize * 0.7)));
-            const entrees = Math.max(3, Math.min(5, Math.ceil(partySize * 0.6)));
-            const desserts = Math.max(2, Math.min(3, Math.ceil(partySize * 0.4)));
-            
-            return `For a group of ${partySize} people sharing family style:
-            - Recommend ${appetizers} different appetizers that can be shared
-            - Recommend ${entrees} different entrees to accommodate various tastes
-            - If desserts are requested, recommend ${desserts} different options
-            - Ensure dishes complement each other and provide a variety of flavors and ingredients
-            - Each dish should serve 2-4 people on average
-            - Include a mix of proteins, vegetables, and starches across the selections`;
-        };
-
-        const diningStyle = formData.familyStyle
-            ? getFamilyStyleGuidelines(formData.partySize)
-            : "Please recommend individual dishes for each person, aiming to get as close to the maximum budget as possible while staying within range. Ensure everyone gets their requested courses.";
-
-        const prompt = `As an AI restaurant menu expert, please recommend dishes from ${formData.restaurant} 
-            located at ${formData.address} in ${formData.city}, ${formData.state} (Google Places ID: ${formData.placeId}), with the following criteria:
-            
-            IMPORTANT: Please ONLY recommend dishes from this specific restaurant location. Do not suggest items from other restaurants or locations.
-            
-            - Party size: ${formData.partySize} people
-            ${budgetMessage}
-            ${coursesMessage}
-            ${formData.preferences.length ? `- Dietary preferences: ${formData.preferences.join(', ')}` : ''}
-            ${formData.additional ? `- Additional preferences: ${formData.additional}` : ''}
-            ${feedback ? `- Additional feedback: ${feedback}` : ''}
-            
-            ${diningStyle}
-            
-            IMPORTANT GUIDELINES:
-            1. Try to get as close to the maximum budget as possible while staying within the range
-            2. Only include courses that were specifically requested
-            3. For each dish, include:
-               - Name of the dish
-               - Brief description and why it matches the criteria
-               - Price (in USD)
-               - ${formData.familyStyle ? 'Recommended serving size (how many people it typically serves)' : 'Whether it is an individual portion'}
-               ${formData.familyStyle ? '- Suggested number of orders for the group size' : ''}
-
-            After listing the recommendations, please provide a detailed cost breakdown:
-            - Subtotal for food (including multiple orders of shared dishes if needed)
-            - Sales tax (${formData.taxRate}%)
-            - Optional tip (${formData.tipPercentage}%)
-            - Total with tax and tip
-
-            Ensure the total cost (including tax and tip if specified) stays within the $${formData.totalMinBudget} - $${formData.totalMaxBudget} range.`;
-
         try {
-            const response = await fetch('/.netlify/functions/get-openai-recommendations', {
+            // First, get restaurant data from Yelp
+            const response = await fetch('/.netlify/functions/get-yelp-business', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: formData.restaurant,
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state,
+                    placeId: formData.placeId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch restaurant data from Yelp');
+            }
+
+            const yelpData = await response.json();
+            
+            // Include Yelp data in the prompt for more accurate recommendations
+            const restaurantInfo = `
+                Restaurant: ${formData.restaurant}
+                Address: ${formData.address}
+                Price Level: ${yelpData.price || 'Not available'}
+                Categories: ${yelpData.categories?.map(c => c.title).join(', ') || 'Not available'}
+                Rating: ${yelpData.rating || 'Not available'} (${yelpData.review_count || 0} reviews)
+                Yelp URL: ${yelpData.url || 'Not available'}
+            `;
+
+            const budgetMessage = formData.includeTax 
+                ? `- Total budget range (including ${formData.taxRate}% sales tax and ${formData.tipPercentage}% tip): $${formData.totalMinBudget} - $${formData.totalMaxBudget}\n  (This means the food total should be between $${formData.adjustedMinBudget} and $${formData.adjustedMaxBudget} before tax and tip)`
+                : `- Budget range for food (before tax and tip): $${formData.adjustedMinBudget} - $${formData.adjustedMaxBudget}`;
+
+            const coursesMessage = formData.courses.length
+                ? `- Requested courses: ${formData.courses.join(', ')}`
+                : '- No specific course preferences';
+
+            const getFamilyStyleGuidelines = (partySize) => {
+                const appetizers = Math.max(3, Math.min(5, Math.ceil(partySize * 0.7)));
+                const entrees = Math.max(3, Math.min(5, Math.ceil(partySize * 0.6)));
+                const desserts = Math.max(2, Math.min(3, Math.ceil(partySize * 0.4)));
+                
+                return `For a group of ${partySize} people sharing family style:
+                - Recommend ${appetizers} different appetizers that can be shared
+                - Recommend ${entrees} different entrees to accommodate various tastes
+                - If desserts are requested, recommend ${desserts} different options
+                - Ensure dishes complement each other and provide a variety of flavors and ingredients
+                - Each dish should serve 2-4 people on average
+                - Include a mix of proteins, vegetables, and starches across the selections`;
+            };
+
+            const diningStyle = formData.familyStyle
+                ? getFamilyStyleGuidelines(formData.partySize)
+                : "Please recommend individual dishes for each person, aiming to get as close to the maximum budget as possible while staying within range. Ensure everyone gets their requested courses.";
+
+            const prompt = `As an AI restaurant menu expert, please provide recommendations for ${formData.restaurant} 
+                based on the following verified information:
+                
+                ${restaurantInfo}
+                
+                CRITERIA:
+                - Party size: ${formData.partySize} people
+                ${budgetMessage}
+                ${coursesMessage}
+                ${formData.preferences.length ? `- Dietary preferences: ${formData.preferences.join(', ')}` : ''}
+                ${formData.additional ? `- Additional preferences: ${formData.additional}` : ''}
+                ${feedback ? `- Additional feedback: ${feedback}` : ''}
+                
+                ${diningStyle}
+                
+                IMPORTANT GUIDELINES:
+                1. Base recommendations on the restaurant's price level (${yelpData.price || 'unknown'}) and cuisine types (${yelpData.categories?.map(c => c.title).join(', ') || 'unknown'})
+                2. Try to get as close to the maximum budget as possible while staying within the range
+                3. Only include courses that were specifically requested
+                4. For each dish recommendation, include:
+                   - Name of the dish (use typical names for this cuisine type and price level)
+                   - Brief description of ingredients and preparation style
+                   - Estimated price range based on the restaurant's price level
+                   - ${formData.familyStyle ? 'Recommended serving size (how many people it typically serves)' : 'Whether it is an individual portion'}
+                   ${formData.familyStyle ? '- Suggested number of orders for the group size' : ''}
+
+                After listing the recommendations, please provide a detailed cost breakdown:
+                - Subtotal for food (including multiple orders of shared dishes if needed)
+                - Sales tax (${formData.taxRate}%)
+                - Optional tip (${formData.tipPercentage}%)
+                - Total with tax and tip
+
+                Ensure the total cost (including tax and tip if specified) stays within the $${formData.totalMinBudget} - $${formData.totalMaxBudget} range.
+                
+                Note: These are AI-generated suggestions based on the restaurant's cuisine type, price level, and typical menu items for similar establishments. Actual menu items and prices may vary.`;
+
+            const aiResponse = await fetch('/.netlify/functions/get-openai-recommendations', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -490,13 +524,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
+            if (!aiResponse.ok) {
+                const errorData = await aiResponse.json().catch(() => null);
                 console.error('API Error:', errorData);
-                throw new Error(`API Error: ${errorData?.error?.message || response.statusText}`);
+                throw new Error(`API Error: ${errorData?.error?.message || aiResponse.statusText}`);
             }
 
-            const data = await response.json();
+            const data = await aiResponse.json();
             return data.content;
         } catch (error) {
             console.error('Full error:', error);
