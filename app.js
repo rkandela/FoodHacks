@@ -560,6 +560,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const category = this.querySelector('h3').textContent;
                 const restaurantsList = this.querySelector('ul');
                 
+                // Show loading state
+                restaurantsList.innerHTML = `
+                    <li class="text-sm py-1 text-gray-500">
+                        <div class="flex items-center space-x-2">
+                            <svg class="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Finding restaurants near you...</span>
+                        </div>
+                    </li>`;
+                
                 try {
                     // Get user's location
                     const position = await getCurrentPosition();
@@ -575,22 +587,58 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     
                     service.nearbySearch(request, (results, status) => {
-                        if (status === google.maps.places.PlacesServiceStatus.OK) {
+                        if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
                             const topRestaurants = results.slice(0, 5);
                             restaurantsList.innerHTML = topRestaurants.map(place => `
-                                <li class="text-sm py-1">
-                                    <strong>${place.name}</strong>
-                                    <br>
-                                    <span class="text-gray-600">${place.rating} ⭐ (${place.user_ratings_total} reviews)</span>
+                                <li class="text-sm py-2 border-b border-gray-100 last:border-0">
+                                    <button class="w-full text-left hover:bg-gray-50 transition-colors duration-200 rounded px-2 -mx-2"
+                                            onclick="selectRestaurant('${place.name.replace(/'/g, "\\'")}', '${place.vicinity?.replace(/'/g, "\\'")}')">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <strong class="text-black">${place.name}</strong>
+                                                <div class="text-gray-600 flex items-center mt-1">
+                                                    <span class="mr-2">${place.rating || 'N/A'} ⭐</span>
+                                                    ${place.user_ratings_total ? `<span>(${place.user_ratings_total} reviews)</span>` : ''}
+                                                </div>
+                                                <div class="text-gray-500 text-xs mt-1">${place.vicinity || ''}</div>
+                                            </div>
+                                            ${place.price_level ? `<span class="text-gray-500">${'$'.repeat(place.price_level)}</span>` : ''}
+                                        </div>
+                                    </button>
                                 </li>
                             `).join('');
                         } else {
-                            restaurantsList.innerHTML = '<li>Failed to load restaurants</li>';
+                            restaurantsList.innerHTML = `
+                                <li class="text-sm py-1 text-gray-500">
+                                    <div class="flex items-center space-x-2">
+                                        <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                        </svg>
+                                        <span>No restaurants found nearby</span>
+                                    </div>
+                                </li>`;
                         }
                     });
                 } catch (error) {
                     console.error('Error fetching restaurants:', error);
-                    restaurantsList.innerHTML = '<li>Failed to load restaurants</li>';
+                    let errorMessage = 'Failed to load restaurants';
+                    if (error.code === 1) { // PERMISSION_DENIED
+                        errorMessage = 'Please enable location access to see nearby restaurants';
+                    } else if (error.code === 2) { // POSITION_UNAVAILABLE
+                        errorMessage = 'Unable to determine your location';
+                    } else if (error.code === 3) { // TIMEOUT
+                        errorMessage = 'Location request timed out';
+                    }
+                    
+                    restaurantsList.innerHTML = `
+                        <li class="text-sm py-1 text-gray-500">
+                            <div class="flex items-center space-x-2">
+                                <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <span>${errorMessage}</span>
+                            </div>
+                        </li>`;
                 }
             }
         });
@@ -606,4 +654,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Add this function to handle restaurant selection
+    window.selectRestaurant = (name, address) => {
+        const restaurantInput = document.getElementById('restaurant');
+        const locationInput = document.getElementById('location');
+        
+        restaurantInput.value = name;
+        locationInput.value = address || '';
+        
+        // Trigger the place_changed event on the restaurant autocomplete
+        const event = new Event('place_changed');
+        restaurantInput.dispatchEvent(event);
+        
+        // Scroll to the form
+        document.getElementById('recommendationForm').scrollIntoView({ behavior: 'smooth' });
+        
+        // Add visual feedback
+        restaurantInput.classList.add('ring-2', 'ring-black');
+        setTimeout(() => {
+            restaurantInput.classList.remove('ring-2', 'ring-black');
+        }, 1000);
+    };
 });
