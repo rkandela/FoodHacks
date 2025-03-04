@@ -93,6 +93,17 @@ function initAutocomplete() {
                 return;
             }
 
+            // Store the full place data
+            window.selectedRestaurant = {
+                name: place.name,
+                address: place.formatted_address,
+                placeId: place.place_id,
+                location: {
+                    lat: place.geometry.location.lat(),
+                    lng: place.geometry.location.lng()
+                }
+            };
+
             // Extract and set location information
             let city = '';
             let state = '';
@@ -120,7 +131,8 @@ function initAutocomplete() {
                 name: place.name,
                 address: place.formatted_address,
                 city,
-                state
+                state,
+                placeId: place.place_id
             });
         });
 
@@ -334,15 +346,23 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // Validate that we have the correct restaurant data
+        if (!window.selectedRestaurant) {
+            displayError('Please select a restaurant from the suggestions list');
+            return;
+        }
+
         // Show loading state
         const submitButton = form.querySelector('button[type="submit"]');
         const originalButtonText = submitButton.textContent;
         submitButton.textContent = 'Getting Recommendations...';
         submitButton.disabled = true;
 
-        // Gather form data
+        // Update form data to use the stored restaurant information
         currentFormData = {
-            restaurant: document.getElementById('restaurant').value,
+            restaurant: window.selectedRestaurant.name,
+            address: window.selectedRestaurant.address,
+            placeId: window.selectedRestaurant.placeId,
             city: document.getElementById('city').value,
             state: document.getElementById('state').value,
             partySize: parseInt(document.getElementById('partySize').value) || 1,
@@ -428,7 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
             : "Please recommend individual dishes for each person, aiming to get as close to the maximum budget as possible while staying within range. Ensure everyone gets their requested courses.";
 
         const prompt = `As an AI restaurant menu expert, please recommend dishes from ${formData.restaurant} 
-            located in ${formData.city}, ${formData.state}, with the following criteria:
+            located at ${formData.address} in ${formData.city}, ${formData.state} (Google Places ID: ${formData.placeId}), with the following criteria:
+            
+            IMPORTANT: Please ONLY recommend dishes from this specific restaurant location. Do not suggest items from other restaurants or locations.
+            
             - Party size: ${formData.partySize} people
             ${budgetMessage}
             ${coursesMessage}
@@ -592,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             restaurantsList.innerHTML = topRestaurants.map(place => `
                                 <li class="text-sm py-2 border-b border-gray-100 last:border-0">
                                     <button class="w-full text-left hover:bg-gray-50 transition-colors duration-200 rounded px-2 -mx-2"
-                                            onclick="selectRestaurant('${place.name.replace(/'/g, "\\'")}', '${place.vicinity?.replace(/'/g, "\\'")}')">
+                                            onclick="selectRestaurant('${place.name.replace(/'/g, "\\'")}', '${place.vicinity?.replace(/'/g, "\\'")}', '${place.place_id}')">
                                         <div class="flex justify-between items-start">
                                             <div>
                                                 <strong class="text-black">${place.name}</strong>
@@ -655,25 +678,59 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add this function to handle restaurant selection
-    window.selectRestaurant = (name, address) => {
+    // Update the selectRestaurant function to get full place details
+    window.selectRestaurant = (name, address, placeId) => {
         const restaurantInput = document.getElementById('restaurant');
         const locationInput = document.getElementById('location');
         
-        restaurantInput.value = name;
-        locationInput.value = address || '';
-        
-        // Trigger the place_changed event on the restaurant autocomplete
-        const event = new Event('place_changed');
-        restaurantInput.dispatchEvent(event);
-        
-        // Scroll to the form
-        document.getElementById('recommendationForm').scrollIntoView({ behavior: 'smooth' });
-        
-        // Add visual feedback
-        restaurantInput.classList.add('ring-2', 'ring-black');
-        setTimeout(() => {
-            restaurantInput.classList.remove('ring-2', 'ring-black');
-        }, 1000);
+        // Get detailed place information
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
+        service.getDetails({
+            placeId: placeId,
+            fields: ['name', 'formatted_address', 'address_components', 'geometry', 'place_id']
+        }, (place, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK) {
+                // Store the full place data
+                window.selectedRestaurant = {
+                    name: place.name,
+                    address: place.formatted_address,
+                    placeId: place.place_id,
+                    location: {
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng()
+                    }
+                };
+
+                restaurantInput.value = place.name;
+                locationInput.value = place.formatted_address || '';
+
+                // Extract and set city and state
+                let city = '';
+                let state = '';
+                
+                if (place.address_components) {
+                    for (const component of place.address_components) {
+                        const type = component.types[0];
+                        if (type === 'locality') {
+                            city = component.long_name;
+                        } else if (type === 'administrative_area_level_1') {
+                            state = component.short_name;
+                        }
+                    }
+                }
+
+                document.getElementById('city').value = city;
+                document.getElementById('state').value = state;
+
+                // Scroll to the form
+                document.getElementById('recommendationForm').scrollIntoView({ behavior: 'smooth' });
+                
+                // Add visual feedback
+                restaurantInput.classList.add('ring-2', 'ring-black');
+                setTimeout(() => {
+                    restaurantInput.classList.remove('ring-2', 'ring-black');
+                }, 1000);
+            }
+        });
     };
 });
