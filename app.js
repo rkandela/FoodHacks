@@ -408,8 +408,23 @@ document.addEventListener('DOMContentLoaded', () => {
             ? `- Requested courses: ${formData.courses.join(', ')}`
             : '- No specific course preferences';
 
+        const getFamilyStyleGuidelines = (partySize) => {
+            // Calculate recommended number of dishes based on party size
+            const appetizers = Math.max(3, Math.min(5, Math.ceil(partySize * 0.7)));
+            const entrees = Math.max(3, Math.min(5, Math.ceil(partySize * 0.6)));
+            const desserts = Math.max(2, Math.min(3, Math.ceil(partySize * 0.4)));
+            
+            return `For a group of ${partySize} people sharing family style:
+            - Recommend ${appetizers} different appetizers that can be shared
+            - Recommend ${entrees} different entrees to accommodate various tastes
+            - If desserts are requested, recommend ${desserts} different options
+            - Ensure dishes complement each other and provide a variety of flavors and ingredients
+            - Each dish should serve 2-4 people on average
+            - Include a mix of proteins, vegetables, and starches across the selections`;
+        };
+
         const diningStyle = formData.familyStyle
-            ? "Please recommend shareable dishes suitable for family-style dining. Include a mix of the requested courses that can be shared among the group. The total cost of all dishes combined should be as close to the maximum budget as possible while staying within range."
+            ? getFamilyStyleGuidelines(formData.partySize)
             : "Please recommend individual dishes for each person, aiming to get as close to the maximum budget as possible while staying within range. Ensure everyone gets their requested courses.";
 
         const prompt = `As an AI restaurant menu expert, please recommend dishes from ${formData.restaurant} 
@@ -431,9 +446,10 @@ document.addEventListener('DOMContentLoaded', () => {
                - Brief description and why it matches the criteria
                - Price (in USD)
                - ${formData.familyStyle ? 'Recommended serving size (how many people it typically serves)' : 'Whether it is an individual portion'}
+               ${formData.familyStyle ? '- Suggested number of orders for the group size' : ''}
 
             After listing the recommendations, please provide a detailed cost breakdown:
-            - Subtotal for food
+            - Subtotal for food (including multiple orders of shared dishes if needed)
             - Sales tax (${formData.taxRate}%)
             - Optional tip (${formData.tipPercentage}%)
             - Total with tax and tip
