@@ -64,26 +64,78 @@ async function initGooglePlaces() {
 function initAutocomplete() {
     console.log('Initializing autocomplete...'); // Debug log
     const locationInput = document.getElementById('location');
-    if (!locationInput) {
-        console.error('Location input element not found');
+    const restaurantInput = document.getElementById('restaurant');
+
+    if (!locationInput || !restaurantInput) {
+        console.error('Input elements not found');
         return;
     }
 
     try {
-        const autocomplete = new google.maps.places.Autocomplete(locationInput, {
+        // Initialize restaurant name autocomplete
+        const restaurantAutocomplete = new google.maps.places.Autocomplete(restaurantInput, {
             fields: ['address_components', 'name', 'formatted_address', 'geometry', 'place_id', 'types'],
-            types: ['establishment', 'geocode'] // Allow both establishments and addresses
+            types: ['restaurant', 'food', 'cafe', 'bar'] // Only show food establishments
         });
-        console.log('Autocomplete object created successfully'); // Debug log
 
-        // Update placeholder to indicate functionality
-        locationInput.setAttribute('placeholder', 'Start typing a restaurant name or address...');
+        // Initialize location autocomplete
+        const locationAutocomplete = new google.maps.places.Autocomplete(locationInput, {
+            fields: ['address_components', 'name', 'formatted_address', 'geometry', 'place_id', 'types'],
+            types: ['address'] // Only show addresses
+        });
 
-        // Handle place selection
-        autocomplete.addListener('place_changed', () => {
-            console.log('Place selection detected'); // Debug log
-            const place = autocomplete.getPlace();
-            console.log('Selected place:', place); // For debugging
+        console.log('Autocomplete objects created successfully'); // Debug log
+
+        // Update placeholders
+        restaurantInput.setAttribute('placeholder', 'Start typing restaurant name...');
+        locationInput.setAttribute('placeholder', 'Enter address...');
+
+        // Handle restaurant selection
+        restaurantAutocomplete.addListener('place_changed', () => {
+            console.log('Restaurant selection detected'); // Debug log
+            const place = restaurantAutocomplete.getPlace();
+            console.log('Selected restaurant:', place); // For debugging
+
+            if (!place.address_components) {
+                console.error('No address components found in selected place');
+                return;
+            }
+
+            // Extract and set location information
+            let city = '';
+            let state = '';
+            let address = '';
+
+            for (const component of place.address_components) {
+                const type = component.types[0];
+                if (type === 'locality') {
+                    city = component.long_name;
+                } else if (type === 'administrative_area_level_1') {
+                    state = component.short_name;
+                } else if (type === 'street_number' || type === 'route') {
+                    address += component.long_name + ' ';
+                }
+            }
+
+            // Update form fields
+            document.getElementById('city').value = city;
+            document.getElementById('state').value = state;
+            document.getElementById('location').value = place.formatted_address || '';
+            document.getElementById('restaurant').value = place.name || '';
+
+            console.log('Updated form with restaurant data:', { 
+                name: place.name,
+                address: place.formatted_address,
+                city,
+                state
+            });
+        });
+
+        // Handle location selection
+        locationAutocomplete.addListener('place_changed', () => {
+            console.log('Location selection detected'); // Debug log
+            const place = locationAutocomplete.getPlace();
+            console.log('Selected location:', place); // For debugging
 
             if (!place.address_components) {
                 console.error('No address components found in selected place');
@@ -102,23 +154,12 @@ function initAutocomplete() {
                 }
             }
 
-            console.log('Extracted location data:', { city, state }); // Debug log
-
             // Update hidden fields
             document.getElementById('city').value = city;
             document.getElementById('state').value = state;
-
-            // If it's a restaurant or food establishment, update the restaurant name
-            if (place.types && (place.types.includes('restaurant') || 
-                place.types.includes('food') || 
-                place.types.includes('cafe') ||
-                place.types.includes('bar'))) {
-                document.getElementById('restaurant').value = place.name || '';
-                console.log('Updated restaurant name:', place.name); // Debug log
-            }
-
-            // Update location input to show full address
             locationInput.value = place.formatted_address || '';
+
+            console.log('Updated location data:', { city, state });
         });
 
         console.log('Autocomplete initialization completed successfully'); // Debug log

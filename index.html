@@ -98,14 +98,16 @@
                         <label for="restaurant" class="block text-gray-700 font-medium mb-2">Restaurant Name</label>
                         <input type="text" id="restaurant" name="restaurant" required
                             class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black"
-                            placeholder="e.g., Olive Garden">
+                            placeholder="Search for restaurants...">
+                        <p class="mt-1 text-sm text-gray-500">Start typing to see suggestions from Google Places</p>
                     </div>
 
                     <div class="mb-6">
-                        <label for="location" class="block text-gray-700 font-medium mb-2">Restaurant Location</label>
-                        <input type="text" id="location" name="location" required
-                            placeholder="Enter restaurant location"
+                        <label for="location" class="block text-gray-700 font-medium mb-2">Different Location? (Optional)</label>
+                        <input type="text" id="location" name="location"
+                            placeholder="Enter a different address if needed"
                             class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black">
+                        <p class="mt-1 text-sm text-gray-500">Leave empty to use restaurant's address</p>
                         <input type="hidden" id="city" name="city">
                         <input type="hidden" id="state" name="state">
                     </div>
