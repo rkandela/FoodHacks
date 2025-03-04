@@ -40,17 +40,13 @@ async function initGooglePlaces() {
         
         // Load the Google Places API script
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${data.key}&libraries=places&callback=initAutocomplete`;
         script.async = true;
+        script.defer = true;
         
         // Add error handling for script loading
         script.onerror = () => {
             console.error('Failed to load Google Places API script');
-        };
-        
-        script.onload = () => {
-            console.log('Google Places API script loaded successfully'); // Debug log
-            initAutocomplete();
         };
         
         document.head.appendChild(script);
@@ -80,15 +76,11 @@ function initAutocomplete() {
 
         // Initialize location autocomplete
         const locationAutocomplete = new google.maps.places.Autocomplete(locationInput, {
-            fields: ['address_components', 'name', 'formatted_address', 'geometry', 'place_id', 'types'],
+            fields: ['address_components', 'formatted_address', 'geometry', 'place_id'],
             types: ['address'] // Only show addresses
         });
 
         console.log('Autocomplete objects created successfully'); // Debug log
-
-        // Update placeholders
-        restaurantInput.setAttribute('placeholder', 'Start typing restaurant name...');
-        locationInput.setAttribute('placeholder', 'Enter address...');
 
         // Handle restaurant selection
         restaurantAutocomplete.addListener('place_changed', () => {
@@ -96,8 +88,8 @@ function initAutocomplete() {
             const place = restaurantAutocomplete.getPlace();
             console.log('Selected restaurant:', place); // For debugging
 
-            if (!place.address_components) {
-                console.error('No address components found in selected place');
+            if (!place.geometry) {
+                console.error('No place geometry found');
                 return;
             }
 
@@ -106,14 +98,16 @@ function initAutocomplete() {
             let state = '';
             let address = '';
 
-            for (const component of place.address_components) {
-                const type = component.types[0];
-                if (type === 'locality') {
-                    city = component.long_name;
-                } else if (type === 'administrative_area_level_1') {
-                    state = component.short_name;
-                } else if (type === 'street_number' || type === 'route') {
-                    address += component.long_name + ' ';
+            if (place.address_components) {
+                for (const component of place.address_components) {
+                    const type = component.types[0];
+                    if (type === 'locality') {
+                        city = component.long_name;
+                    } else if (type === 'administrative_area_level_1') {
+                        state = component.short_name;
+                    } else if (type === 'street_number' || type === 'route') {
+                        address += component.long_name + ' ';
+                    }
                 }
             }
 
@@ -121,7 +115,6 @@ function initAutocomplete() {
             document.getElementById('city').value = city;
             document.getElementById('state').value = state;
             document.getElementById('location').value = place.formatted_address || '';
-            document.getElementById('restaurant').value = place.name || '';
 
             console.log('Updated form with restaurant data:', { 
                 name: place.name,
@@ -137,27 +130,28 @@ function initAutocomplete() {
             const place = locationAutocomplete.getPlace();
             console.log('Selected location:', place); // For debugging
 
-            if (!place.address_components) {
-                console.error('No address components found in selected place');
+            if (!place.geometry) {
+                console.error('No place geometry found');
                 return;
             }
 
             // Extract city and state
             let city = '';
             let state = '';
-            for (const component of place.address_components) {
-                const type = component.types[0];
-                if (type === 'locality') {
-                    city = component.long_name;
-                } else if (type === 'administrative_area_level_1') {
-                    state = component.short_name;
+            if (place.address_components) {
+                for (const component of place.address_components) {
+                    const type = component.types[0];
+                    if (type === 'locality') {
+                        city = component.long_name;
+                    } else if (type === 'administrative_area_level_1') {
+                        state = component.short_name;
+                    }
                 }
             }
 
             // Update hidden fields
             document.getElementById('city').value = city;
             document.getElementById('state').value = state;
-            locationInput.value = place.formatted_address || '';
 
             console.log('Updated location data:', { city, state });
         });
